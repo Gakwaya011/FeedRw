@@ -1,0 +1,111 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Will store hashed password
+  username  String?  @unique // Optional: for display names, etc.
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      UserRole @default(CITIZEN) // Define roles: CITIZEN, ORGANIZATION_ADMIN, MODERATOR, SUPER_ADMIN
+
+  issuesReported Issue[] @relation("ReportedIssues") // Issues reported by this user
+  votes          Vote[]
+  comments       Comment[] 
+
+  @@map("users") // Maps this model to a table named 'users' in the database
+}
+
+model Issue {
+  id          String    @id @default(uuid())
+  title       String
+  description String
+  category    String // e.g., "Infrastructure", "Health", "Education"
+  location    String? // Could be a text description or coordinates (e.g., "Rwanda, Kigali, Gasabo, Kicukiro Sector")
+  status      IssueStatus @default(SUBMITTED) // Enum: SUBMITTED, RECEIVED, IN_PROGRESS, RESOLVED, REJECTED
+  photoUrl    String?   // URL to uploaded photo
+  reporterId  String
+  reporter    User      @relation("ReportedIssues", fields: [reporterId], references: [id])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  votes        Vote[]
+  comments     Comment[]
+  organization Organization? @relation(fields: [organizationId], references: [id])
+  organizationId String?
+
+  @@map("issues") // Maps this model to a table named 'issues' in the database
+}
+
+model Organization {
+  id           String   @id @default(uuid())
+  name         String   @unique
+  description  String?
+  contactEmail String?
+  issues       Issue[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+model Vote {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  issueId   String
+  issue     Issue    @relation(fields: [issueId], references: [id])
+  type      VoteType // UPVOTE, DOWNVOTE
+  createdAt DateTime @default(now())
+
+  @@unique([userId, issueId]) // A user can only vote once per issue
+
+  @@map("votes")
+}
+
+// Enums for clarity and type safety
+enum UserRole {
+  CITIZEN
+  ORGANIZATION_ADMIN
+  MODERATOR
+  SUPER_ADMIN
+}
+
+enum IssueStatus {
+  SUBMITTED
+  RECEIVED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum VoteType {
+  UPVOTE
+  DOWNVOTE
+}

@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine # Using a lightweight PostgreSQL image
+    restart: always
+    environment:
+      POSTGRES_DB: feedrw_db
+      POSTGRES_USER: feedrw_user
+      POSTGRES_PASSWORD: supersecretpassword # IMPORTANT: CHANGE THIS TO A STRONG PASSWORD IN PRODUCTION!
+    ports:
+      - "5432:5432" # Host port : Container port
+    volumes:
+      - db_data:/var/lib/postgresql/data # Persist data even if container is removed
+
+volumes:
+  db_data:
